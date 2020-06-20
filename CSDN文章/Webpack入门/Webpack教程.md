@@ -1,3 +1,7 @@
+## 1.Node环境的安装
+
+
+
 ## 2.Webpack
 
 ### 2.1什么是Webpack？
@@ -120,4 +124,184 @@ module.exports = {
 然后我们就可以用```npm start```来进行打包了，虽然看上去更加复杂，但到以后项目复杂起来，需要做更多的操作的时候，它的好处就出来了。
 
 ### 2.5Webpack构建本地服务器
+
+Webpack提供了一个本地开发服务器，它是基于node.js构建的，是一个单独的组件，因此需要单独安装并配置依赖，步骤如下：
+
+1. npm下载相应的包
+```
+   npm i webpack-dev-server -D
+```
+
+2. 在webpack.config.js进行相关配置
+
+   ```
+    devServer:{
+       contentBase: "./dist", // 本地服务器所加载文件的目录
+       port: "3066",          // 设置端口号
+       inline: true,          // 文件修改后实时刷新
+       historyApiFallback: true, //不跳转contentBase
+     }
+   ```
+
+3. 在package.json中添加启动命令
+
+   ```
+   "scripts": {
+       "build": "webpack",     //这里我把打包改成了build
+       "serve": "webpack-dev-server --open"   //主要是配置这里
+     },
+   ```
+
+   其中``webpack-dev-serve``是启动服务的命令，而``--open``是自动打开浏览器的命令，我们可以通过一个serve命令将两者集成在一起，最后在终端输入``npm run serve``即可查看页面。
+
+### 2.6Loaders
+
+loaders是Webpack十分重要的功能之一，通过不同的loader，webpack可以调用外部的脚本或工具，实现对不同文件的处理，比如可以将less、sass转成css等等。当然loaders也需要单独安装并在``webpack.config.js``中的``modules``配置项下进行配置，包括以下几个方面：
+
++ ``test``：一个用以匹配loaders所处理文件的拓展名的正则表达式
++ ``loader``：loader的名称
++ ``include/exclude``：手动添加必须要处理的文件或屏蔽不需要处理的文件(可选)
++ ``options``：为loaders提供额外的设置选项(可选)
+
+下面我们以配置css-loader为例：
+
+1. 安装两个包
+
+   ```
+   npm i style-loader css-loader -D
+   ```
+
+2. 在webpack.config.js添加module配置项
+
+   ```
+   module: {
+       rules:[
+         {
+           test:/\.css$/,   //匹配.css结尾的文件
+           use:['style-loader','css-loader']  //注意顺序，调用loader是从右往左编译的的
+         }
+       ]
+     }
+   ```
+
+3. 在src文件夹下新建css文件夹，并写一个css文件
+
+      ```
+      /* hello.css */
+      #root{
+          font-size: 36px;
+          color: red;
+      }
+      ```
+
+4. 在main.js中引用
+
+   ```
+   import './src/css/hello.css';
+   ```
+
+5. 重启服务，可以看到样式已改变
+
+   ![在这里插入图片描述](https://img-blog.csdnimg.cn/20200620103710178.png)
+
+至于其他loader用法都大同小异，这里就不一一叙述。
+
+### 2.7Babel
+
+Babel是一个编译JavaScript的平台，他可以帮你使用新的ES规范，如es6、es7等，也可以使用基于JS进行了扩展的语言，比如React的JSX。下面以解析ES6的包为例子：
+
+1. 安装三个包
+
+   ```
+   npm i babel-core babel-loader babel-preset-env -D
+   ```
+
+2. 在webpack.config.js的module中配置
+
+   ```
+    {
+           test:/\.js$/, 
+           use:{          //use如果有多项配置，可以用这种写法
+             loader:"babel-loader",
+             options:{
+               presets:[
+                 "env"
+               ]
+             }
+           },
+           exclude:/node_modules/
+      }
+   ```
+
+3. 此时，重启服务可能会报错，如下：
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20200620105854932.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3dlaXhpbl80MDc2NDA0Nw==,size_16,color_FFFFFF,t_0)
+
+   这是因为官方规定``babel-loader``和``babel``的版本需要一致，因此需要同一版本，输入以下命令进行版本回退：
+
+   ```
+   npm i babel-loader@7 babel-core babel-preset-env -D
+   ```
+
+   或者更新到最高的版本也行、
+
+   ```
+   npm i babel-loader @babel/core @babel/preset-env webpack -D
+   ```
+
+   完成后再次重启服务器，成功运行，现在可以支持ES6的语法了。
+
+### 2.8Plugins
+
+plugins是插件，用于扩展Webpack的功能，他与loader不一样，loader是在打包构建的过程中处理源文件的，一次只能处理一个文件，而插件则是在整个构建过程中起作用，下面介绍两个常用的插件的使用。
+
+1. 自动生成html文件插件
+
+   你应该发现了，我们到现在都还是使用一开始建好的``index.html``，并手动引入js，实际上这样做并不可取，因此我们就需要html自动生成。
+
+   首先安装该插件：
+
+   ```
+   npm i html-webpack-plugin -D
+   ```
+
+   然后对项目的结构进行一些修改：
+
+   + 删除``dist``文件夹
+
+   + 在``src``文件夹中新建index.template.html文件模板
+     ```
+     <!-- index.template.html -->
+     <!DOCTYPE html>
+     <html lang="en">
+       <head>
+         <meta charset="utf-8">
+         <title>Here is Template</title>
+       </head>
+       <body>
+         <div id='root'>
+         </div>
+       </body>
+     </html>
+     ```
+   
+   最后在webpack.config.js引入插件，并配置我们的模板。
+   
+   执行``npm run build``，可以看到自动生成了dist文件夹，里面有``bundle.js``和``index.html``，插件已经帮我们自动生成好了
+
+2. 热更新插件
+
+   我们现在每次修改完代码都需要重启服务器，比较麻烦，而热更新插件可以帮我们在修改代码并保存后自动刷新预览效果，而且这个插件是webpack自带的，因此我们不用安装，只需要引入webpack模块后再配置一下即可。
+
+   ```
+   const webpack = require('webpack') //在webpack.config.js引入webpack模块
+   ```
+
+   ```
+   new webpack.HotModuleReplacementPlugin() //在plugins中配置插件
+   ```
+
+   此时启动服务，修改完代码后保存，浏览器就会自动刷新。
+
+
 
